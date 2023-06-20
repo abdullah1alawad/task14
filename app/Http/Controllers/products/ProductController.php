@@ -4,6 +4,7 @@ namespace App\Http\Controllers\products;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Traits\GeneralTrait;
 use Illuminate\Support\Facades\Validator;
@@ -43,7 +44,8 @@ class ProductController extends Controller
                 'product_name' => 'required|regex:/[a-zA-Z\s]+/',
                 'desc' => 'required|string',
                 'price' => 'required|numeric',
-                'category_id' => 'required|numeric'
+                'category_id' => 'required|numeric',
+                'quantity'=>'required|numeric'
             ]
         );
         if ($validator->fails()) {
@@ -51,6 +53,8 @@ class ProductController extends Controller
         }
         try {
             $product = Product::create($request->all());
+            $user=User::find(auth()->user()->id);
+            $user->products()->attach($product,['quantity'=>$request->input('quantity')]);
             $msg = 'product is created successfully';
             return $this->successResponse($product, $msg, 201);
         } catch (\Exception $ex) {
@@ -92,13 +96,13 @@ class ProductController extends Controller
                 'product_name' => 'required|regex:/[a-zA-Z\s]+/',
                 'desc' => 'required|string',
                 'price' => 'required|numeric',
-                'category_id' => 'required|numeric'
+                'category_id' => 'required|numeric',
+                'quantity'=>'required|numeric'
             ]
         );
         if ($validator->fails()) {
             return $this->errorResponse($validator->errors(), 422);
         }
-
 
         try {
             $data = Product::find($id);
@@ -107,6 +111,9 @@ class ProductController extends Controller
 
             $data->update($request->all());
             $data->save();
+            $user=User::find(auth()->user()->id);
+            $user->products()->sync([$data->id=>['quantity'=>$request->input('quantity')]]);
+
             $msg = 'The product is updated successfully';
             return $this->successResponse($data, $msg);
         } catch (\Exception $ex) {
@@ -126,7 +133,6 @@ class ProductController extends Controller
             $data = Product::find($id);
             if (!$data)
                 return $this->errorResponse('No product with such id', 404);
-
             $data->delete();
             $msg = 'The product is deleted successfully';
             return $this->successResponse($data, $msg);
@@ -154,6 +160,19 @@ class ProductController extends Controller
             $data=Product::all();
             if(!$data)
                 return $this->errorResponse('there is no products',404);
+            $msg = 'Got data Successfully';
+            return $this->successResponse($data, $msg);
+        }catch (\Exception $ex){
+            return $this->errorResponse($ex->getMessage(), 500);
+        }
+    }
+    public function getProductAndVendors($id)
+    {
+        try {
+            $product=Product::find($id);
+            if(!$product)
+                return $this->errorResponse('there is no product with this id',404);
+            $data=$product->users()->get();
             $msg = 'Got data Successfully';
             return $this->successResponse($data, $msg);
         }catch (\Exception $ex){

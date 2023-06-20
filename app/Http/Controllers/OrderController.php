@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\Order;
 use Illuminate\Http\Request;
@@ -16,7 +17,16 @@ class OrderController extends Controller
      */
     public function index()
     {
-        //
+        try {
+            $data = Order::all();
+            if (!$data)
+                return $this->errorResponse('No orders yet', 404);
+
+            $msg = 'Got you the orders you are looking for';
+            return $this->successResponse($data, $msg);
+        } catch (\Exception $ex) {
+            return $this->errorResponse($ex->getMessage(), 500);
+        }
     }
 
     /**
@@ -28,19 +38,22 @@ class OrderController extends Controller
             'product_id'=>'required|array',
             'product_id.*'=>'integer',
             'quantity'=>'required|array',
-            'quantity.*'=>'integer'
+            'quantity.*'=>'integer',
+            'users_id'=>'required|array',
+            'users_id.*'=>'integer'
         ]);
         if($validator->fails())
             return $this->errorResponse($validator->errors(),422);
 
         $products_id=$request->input('product_id');
         $quantities=$request->input('quantity');
-        if(sizeof($products_id)!=sizeof($quantities))
+        $users_id=$request->input('users_id');
+        if(sizeof($products_id)!=sizeof($quantities)||sizeof($users_id)!=sizeof($quantities))
             return $this->errorResponse('the arrays must be equals',404);
         try {
             $order=Order::create(['user_id'=>auth()->user()->id]);
             for ($i=0;$i<sizeof($quantities);$i++)
-                $order->products()->attach($products_id[$i],['quantity'=>$quantities[$i]]);
+                $order->products()->attach($products_id[$i],['quantity'=>$quantities[$i],'user_id'=>$users_id[$i]]);
 
             $data=$order->with('products')->get();
             return $this->successResponse($data,'order inserted');
@@ -52,9 +65,19 @@ class OrderController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($id)
+    public function show()
     {
-        //
+        try {
+            $data=auth()->user()->with('orders')->get();
+
+            if (!$data)
+                return $this->errorResponse('No orders yet', 404);
+
+            $msg = 'Got you the orders you are looking for';
+            return $this->successResponse($data, $msg);
+        } catch (\Exception $ex) {
+            return $this->errorResponse($ex->getMessage(), 500);
+        }
     }
 
     /**
@@ -63,22 +86,32 @@ class OrderController extends Controller
     public function update(Request $request, $id)
     {
         $validator=Validator::make($request->all(),[
-            'product_id'=>'required|array',
-            'product_id.*'=>'integer',
+            'products_id'=>'required|array',
+            'products_id.*'=>'integer',
             'quantity'=>'required|array',
             'quantity.*'=>'integer'
         ]);
         if($validator->fails())
             return $this->errorResponse($validator->errors(),422);
 
-        $products_id=$request->input('product_id');
         $quantities=$request->input('quantity');
+        $products_id=$request->input('products_id');
         if(sizeof($products_id)!=sizeof($quantities))
             return $this->errorResponse('the arrays must be equals',404);
         try {
             $order=Order::find($id);
+
+            foreach ($products_id as $product_id)
+                $order->products()->detach($product_id);
+
             for ($i=0;$i<sizeof($quantities);$i++)
-                $order->products()->sync();
+                $order->products()->attach($products_id[$i],['quantity'=>$quantities[$i]]);
+//            $products=[];
+//            for ($i=0;$i<sizeof($quantities);$i++)
+//                $products=[$products_id[$i]=>['quantity'=>$quantities[$i]]];
+
+//            $order->products()->sync($products);
+//            $order->save();
             $data=$order->with('products')->get();
             return $this->successResponse($data,'order updated');
         }catch (\Exception $ex){
@@ -91,6 +124,16 @@ class OrderController extends Controller
      */
     public function destroy($id)
     {
-        //
+        try {
+            $data = Order::find($id);
+            if (!$data)
+                return $this->errorResponse('No order with such id', 404);
+
+            $data->delete();
+            $msg = 'The order is deleted successfully';
+            return $this->successResponse($data, $msg);
+        } catch (\Exception $ex) {
+            return $this->errorResponse($ex->getMessage(), 500);
+        }
     }
 }

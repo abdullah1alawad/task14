@@ -44,6 +44,7 @@ Route::group(['middleware'=>'auth:sanctum'],function (){
     Route::get('/product/{id}',[ProductController::class,'show']);
     Route::get('/productSearch/{letter}',[ProductController::class,'filterProductsByCategory']);
     Route::get('/all-products',[ProductController::class,'index']);
+    Route::get('/product/vendors/{id}',[ProductController::class,'getProductAndVendors']);
 });
 
 //-----------------------------categories ------------------------------------
@@ -80,7 +81,15 @@ Route::group(['middleware'=>'auth:sanctum'],function(){
 Route::group(['middleware'=>'auth:sanctum'],function(){
     Route::post('/add-order',[OrderController::class,'store']);
     Route::match(['put','patch'],'/update-order/{id}',[OrderController::class,'update']);
+    Route::delete('/delete-order/{id}',[OrderController::class,'destroy']);
+    Route::get('/user-orders',[OrderController::class,'show']);
+    Route::get('/all-orders',[OrderController::class,'index']);
+});
 
+//-----------------------------------vendors----------------------------------------
+
+Route::group(['middleware'=>['auth:sanctum','isVendor']],function(){
+    Route::post('/add-product-vendor/{id}',[UserController::class,'store']);
 });
 
 //  9|2crMoBHSAc1vUUgyYbT9OwMhnsNq7whcPwjR8fLD

@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use App\Http\Resources\UserCollection;
 use App\Http\Traits\GeneralTrait;
+use Illuminate\Support\Facades\Validator;
+
 class UserController extends Controller
 {
     use GeneralTrait;
@@ -37,9 +40,24 @@ class UserController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request,$id)
     {
-        //
+        $validator = Validator::make($request->all(), [
+                'quantity'=>'required|numeric'
+            ]
+        );
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors(), 422);
+        }
+        try {
+            $product = Product::find($id);
+            $user=User::find(auth()->user()->id);
+            $user->products()->attach($product,['quantity'=>$request->input('quantity')]);
+            $msg = 'you are a vendor now';
+            return $this->successResponse($product, $msg, 201);
+        } catch (\Exception $ex) {
+            return $this->errorResponse($ex->getMessage(), 500);
+        }
     }
 
     /**

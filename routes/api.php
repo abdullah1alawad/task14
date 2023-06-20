@@ -88,6 +88,8 @@ Route::group(['middleware'=>'auth:sanctum'],function(){
 
 //-----------------------------------vendors----------------------------------------
 
+//--------------------------------to be continued-----------------------------------
+
 Route::group(['middleware'=>['auth:sanctum','isVendor']],function(){
     Route::post('/add-product-vendor/{id}',[UserController::class,'store']);
 });
